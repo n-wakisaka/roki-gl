@@ -47,5 +47,6 @@ before_script:
   - cd zx11
   - mkdir -p lib
   - make &&  make install PREFIX=~/usr
+  - cd ../
 script:
   - make
