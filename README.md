@@ -1,6 +1,10 @@
 RoKi-GL - Robot Kinetics library: visualization using OpenGL
 Copyright (C) 2000 Tomomichi Sugihara (Zhidao)
 
+| *master* | *develop* |
+|----------|-----------|
+| [![Build Status](https://travis-ci.org/n-wakisaka/roki-gl.svg?branch=master)](https://travis-ci.org/n-wakisaka/roki-gl) | [![Build Status](https://travis-ci.org/n-wakisaka/roki-gl.svg?branch=develop)](https://travis-ci.org/n-wakisaka/roki-gl)
+
 -----------------------------------------------------------------
 [What is this?]
 
