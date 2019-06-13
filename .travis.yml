@@ -4,6 +4,16 @@ addons:
   apt:
     packages:
       - git
+      - libx11-dev
+      - libxext-dev
+      - libxpm-dev
+      - libpng12-dev
+      - libjpeg8-dev
+      - zlib1g-dev
+      - libgl1-mesa-dev
+      - libglu1-mesa-dev
+      - libglew-dev
+      - freeglut3-dev
 before_script:
   - mkdir -p ~/usr/include
   - mkdir -p ~/usr/bin
