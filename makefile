@@ -10,6 +10,7 @@ DOCDIR:=$(ROOTDIR)/doc
 SAMPLEDIR:=$(ROOTDIR)/example
 
 CHKDEP=`which zeda-chkdep`
+LIBFILE=`grep DLIB= $(SRCDIR)/makefile | cut -d = -f2`
 
 all:
 	@$(CHKDEP) $(DEPENDENCY) || exit 1
@@ -34,3 +35,10 @@ install:
 	-@install -m 644 $(INCDIR)/*.h $(PREFIX)/include/$(PROJNAME)/
 	@echo " INSTALL	applications"
 	@cd $(APPDIR); make install
+uninstall:
+	@echo " UNINSTALL	library"
+	-@rm -f $(PREFIX)/lib/$(LIBFILE)
+	@echo " UNINSTALL	header files"
+	-@rm -f -r $(PREFIX)/include/$(PROJNAME)/
+	@echo " UNINSTALL	applications"
+	@cd $(APPDIR); make uninstall
