@@ -122,7 +122,7 @@ void rk_viewInit(void)
     atof(opt[OPT_LX].arg), atof(opt[OPT_LY].arg), atof(opt[OPT_LZ].arg) );
   rkglShadowInit( &shadow, 512, 512, 1.5, 0.2 );
 
-  if( !zMShape3DScanFile( &ms, opt[OPT_MODELFILE].arg ) ){
+  if( !zMShape3DReadZTK( &ms, opt[OPT_MODELFILE].arg ) ){
     ZOPENERROR( opt[OPT_MODELFILE].arg );
     rk_viewUsage();
     exit( 1 );
@@ -138,7 +138,7 @@ void rk_viewInit(void)
 
 bool rk_viewCommandArgs(int argc, char *argv[])
 {
-  zStrList arglist;
+  zStrAddrList arglist;
   char *modelfile;
 
   if( argc <= 1 ) rk_viewUsage();
@@ -154,7 +154,7 @@ bool rk_viewCommandArgs(int argc, char *argv[])
     return false;
   }
   rk_viewInit();
-  zStrListDestroy( &arglist, false );
+  zStrAddrListDestroy( &arglist );
   return true;
 }
 

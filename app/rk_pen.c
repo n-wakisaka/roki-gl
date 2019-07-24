@@ -401,7 +401,7 @@ void rk_penInit(void)
     exit( 1 );
 
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DScanFile( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_penUsage();
       exit( 1 );
@@ -432,7 +432,7 @@ void rk_penInit(void)
 
 bool rk_penCommandArgs(int argc, char *argv[])
 {
-  zStrList arglist;
+  zStrAddrList arglist;
   char *modelfile;
 
   if( argc <= 1 ) rk_penUsage();
@@ -445,7 +445,7 @@ bool rk_penCommandArgs(int argc, char *argv[])
   }
   rkglWindowCreateGLUT( 0, 0, atoi(opt[OPT_WIDTH].arg), atoi(opt[OPT_HEIGHT].arg), RK_PEN_TITLE );
   rk_penInit();
-  zStrListDestroy( &arglist, false );
+  zStrAddrListDestroy( &arglist );
   return true;
 }
 

@@ -66,7 +66,7 @@ void rk_seqUsage(void)
 
 bool rk_seqCommandArgs(int argc, char *argv[])
 {
-  zStrList arglist;
+  zStrAddrList arglist;
   char *modelfile, *seqfile;
 
   if( argc <= 1 ) rk_seqUsage();
@@ -85,7 +85,7 @@ bool rk_seqCommandArgs(int argc, char *argv[])
     opt[OPT_ZVSFILE].flag = true;
     opt[OPT_ZVSFILE].arg  = seqfile;
   }
-  zStrListDestroy( &arglist, false );
+  zStrAddrListDestroy( &arglist );
   return true;
 }
 
@@ -201,7 +201,7 @@ void rk_seqInit(void)
     exit( 1 );
   }
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DScanFile( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_seqUsage();
       exit( 1 );
