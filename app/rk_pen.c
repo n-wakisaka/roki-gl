@@ -156,14 +156,13 @@ void rk_penSetJointDis(void)
   printf( "enter values [1-%d]> ", rkLinkJointSize(l) );
   for( i=0; i<rkLinkJointSize(l); i++ )
     dis[i] = zFDouble( stdin );
-  switch( rkLinkJointType(l) ){
-  case RK_JOINT_REVOL:
-  case RK_JOINT_CYLIN:
-    dis[0] = zDeg2Rad( dis[0] ); break;
-  case RK_JOINT_HOOKE:
+  if( rkLinkJoint(l)->com == &rk_joint_revol ||
+      rkLinkJoint(l)->com == &rk_joint_cylin ){
     dis[0] = zDeg2Rad( dis[0] );
-    dis[1] = zDeg2Rad( dis[1] ); break;
-  default: ;
+  } else
+  if( rkLinkJoint(l)->com == &rk_joint_hooke ){
+    dis[0] = zDeg2Rad( dis[0] );
+    dis[1] = zDeg2Rad( dis[1] );
   }
   rkLinkSetJointDis( l, dis );
   rkChainUpdateFK( &chain );
@@ -195,7 +194,7 @@ void rk_penSetLinkPos(void)
 
   rkIKCreate( &ik, &chain );
   for( lp=l; lp!=rkChainRoot(&chain); lp=rkLinkParent(lp) )
-    if( rkLinkJointType(lp) != RK_JOINT_FIXED ){
+    if( rkLinkJointSize(lp) > 0 ){
       printf( "register joint [%s].\n", zName(lp) );
       rkIKJointReg( &ik, lp - rkChainRoot(&chain), 0.001 );
     }
@@ -232,7 +231,7 @@ void rk_penSetLinkFrame(void)
 
   rkIKCreate( &ik, &chain );
   for( lp=l; lp!=rkChainRoot(&chain); lp=rkLinkParent(lp) )
-    if( rkLinkJointType(lp) != RK_JOINT_FIXED ){
+    if( rkLinkJointSize(lp) > 0 ){
       printf( "register joint [%s].\n", zName(lp) );
       rkIKJointReg( &ik, lp - rkChainRoot(&chain), 0.001 );
     }
@@ -308,7 +307,7 @@ void rk_penExportInit(void)
   if( !fgets( filename, BUFSIZ, stdin ) ) return;
   zCutNL( filename );
   zAddSuffix( filename, ZEDA_ZTK_SUFFIX, filename, BUFSIZ );
-  rkChainInitPrintFile( &chain, filename );
+  rkChainInitPrintZTK( &chain, filename );
 }
 
 void rk_penCapture(void)
@@ -396,12 +395,12 @@ void rk_penInit(void)
     attr.disptype = RKGL_ELLIPS;
     attr.ellips_mag = atof( opt[OPT_ELLIPS].arg );
   }
-  if( !rkChainScanFile( &chain, opt[OPT_MODELFILE].arg ) ||
+  if( !rkChainScanZTK( &chain, opt[OPT_MODELFILE].arg ) ||
       !rkglChainLoad( &gr, &chain, &attr ) )
     exit( 1 );
 
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DScanZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_penUsage();
       exit( 1 );
@@ -413,7 +412,7 @@ void rk_penInit(void)
     if( env < 0 ) exit( 1 );
   }
   if( opt[OPT_INITFILE].flag &&
-      !rkChainInitScanFile( &chain, opt[OPT_INITFILE].arg ) )
+      !rkChainInitScanZTK( &chain, opt[OPT_INITFILE].arg ) )
     exit( 1 );
   if( opt[OPT_SMOOTH].flag ) glEnable( GL_LINE_SMOOTH );
   if( opt[OPT_FOG].flag ) glEnable( GL_FOG );
