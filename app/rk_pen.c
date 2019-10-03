@@ -97,7 +97,7 @@ void rk_penShowLinkList(void)
 {
   int i;
 
-  for( i=0; i<rkChainNum(&chain); i++ )
+  for( i=0; i<rkChainLinkNum(&chain); i++ )
     printf( "[%2d] %s\n", i, zName(rkChainLink(&chain,i)) );
 }
 
@@ -112,7 +112,7 @@ void rk_penShowJointDis(void)
   double dis[6];
 
   printf( "*** joint displacements ***\n" );
-  for( i=0; i<rkChainNum(&chain); i++ ){
+  for( i=0; i<rkChainLinkNum(&chain); i++ ){
     printf( "[link:%d:%s] \t", i, rkChainLinkName(&chain,i) );
     rkChainLinkGetJointDis( &chain, i, dis );
     for( j=0; j<rkChainLinkJointSize(&chain,i); j++ )
@@ -172,7 +172,7 @@ void rk_penResetJointDis(void)
 {
   int i;
 
-  for( i=0; i<rkChainNum(&chain); i++ )
+  for( i=0; i<rkChainLinkNum(&chain); i++ )
     rkJointNeutral( rkChainLinkJoint( &chain, i ) );
   rkChainUpdateFK( &chain );
 }
@@ -307,7 +307,7 @@ void rk_penExportInit(void)
   if( !fgets( filename, BUFSIZ, stdin ) ) return;
   zCutNL( filename );
   zAddSuffix( filename, ZEDA_ZTK_SUFFIX, filename, BUFSIZ );
-  rkChainInitPrintZTK( &chain, filename );
+  rkChainInitWriteZTK( &chain, filename );
 }
 
 void rk_penCapture(void)
@@ -395,12 +395,12 @@ void rk_penInit(void)
     attr.disptype = RKGL_ELLIPS;
     attr.ellips_mag = atof( opt[OPT_ELLIPS].arg );
   }
-  if( !rkChainScanZTK( &chain, opt[OPT_MODELFILE].arg ) ||
+  if( !rkChainReadZTK( &chain, opt[OPT_MODELFILE].arg ) ||
       !rkglChainLoad( &gr, &chain, &attr ) )
     exit( 1 );
 
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DScanZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_penUsage();
       exit( 1 );
@@ -412,7 +412,7 @@ void rk_penInit(void)
     if( env < 0 ) exit( 1 );
   }
   if( opt[OPT_INITFILE].flag &&
-      !rkChainInitScanZTK( &chain, opt[OPT_INITFILE].arg ) )
+      !rkChainInitReadZTK( &chain, opt[OPT_INITFILE].arg ) )
     exit( 1 );
   if( opt[OPT_SMOOTH].flag ) glEnable( GL_LINE_SMOOTH );
   if( opt[OPT_FOG].flag ) glEnable( GL_FOG );

@@ -107,7 +107,7 @@ bool rk_seqLoadSequence(void)
     }
     zGetBasename( opt[OPT_ZVSFILE].arg, seqfilebase, BUFSIZ );
   }
-  if( !( poselist = zIndexCreate( zListNum(&seq) ) ) ){
+  if( !( poselist = zIndexCreate( zListSize(&seq) ) ) ){
     zSeqFree( &seq );
     return false;
   }
@@ -194,14 +194,14 @@ void rk_seqInit(void)
   rkglShadowInit( &shadow, atoi(opt[OPT_SHADOW_SIZE].arg), atoi(opt[OPT_SHADOW_SIZE].arg), atof(opt[OPT_SHADOW_AREA].arg), 0.2 );
 
   rkglChainAttrInit( &attr );
-  if( !rkChainScanFile( &chain, opt[OPT_MODELFILE].arg ) ||
+  if( !rkChainReadZTK( &chain, opt[OPT_MODELFILE].arg ) ||
       !rkglChainLoad( &gc, &chain, &attr ) ){
     ZOPENERROR( opt[OPT_MODELFILE].arg );
     rk_seqUsage();
     exit( 1 );
   }
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DScanZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_seqUsage();
       exit( 1 );

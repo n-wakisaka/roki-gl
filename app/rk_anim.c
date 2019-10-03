@@ -110,7 +110,7 @@ bool rkAnimCellLoadChain(char chainfile[], rkglChainAttr *attr)
     ZALLOCERROR();
     return false;
   }
-  if( !rkChainScanFile( &cell->data.chain, chainfile ) ||
+  if( !rkChainReadZTK( &cell->data.chain, chainfile ) ||
       !rkglChainLoad( &cell->data.gc, &cell->data.chain, attr ) ){
     ZOPENERROR( chainfile );
     zFree( cell );
@@ -225,9 +225,9 @@ bool rkAnimCellListCreate(zStrList *arglist)
     }
   }
   if( !ret ) return false;
-  if( zListNum(&anim_cell_list) == 1 && zListIsEmpty(arglist) )
+  if( zListSize(&anim_cell_list) == 1 && zListIsEmpty(arglist) )
     if( !rkAnimCellLoadSeq( NULL ) ) return false;
-  if( zListNum(&anim_cell_list) != zListNum(arglist) ){
+  if( zListSize(&anim_cell_list) != zListSize(arglist) ){
     ZRUNERROR( "sequence not specified" );
     return false;
   }
@@ -416,7 +416,7 @@ void rkAnimLoadEnv(void)
   if( opt[OPT_WIREFRAME].flag ) attr.disptype = RKGL_WIREFRAME;
   if( opt[OPT_BB].flag )        attr.disptype = RKGL_BB;
 
-  if( !rkChainMShape3DScanFile( &chain_env, opt[OPT_ENVFILE].arg ) ){
+  if( !rkChainReadZTK( &chain_env, opt[OPT_ENVFILE].arg ) ){
     ZOPENERROR( opt[OPT_ENVFILE].arg );
     rkAnimUsage();
     exit( 1 );
