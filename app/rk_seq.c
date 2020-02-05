@@ -66,7 +66,7 @@ void rk_seqUsage(void)
 
 bool rk_seqCommandArgs(int argc, char *argv[])
 {
-  zStrList arglist;
+  zStrAddrList arglist;
   char *modelfile, *seqfile;
 
   if( argc <= 1 ) rk_seqUsage();
@@ -85,7 +85,7 @@ bool rk_seqCommandArgs(int argc, char *argv[])
     opt[OPT_ZVSFILE].flag = true;
     opt[OPT_ZVSFILE].arg  = seqfile;
   }
-  zStrListDestroy( &arglist, false );
+  zStrAddrListDestroy( &arglist );
   return true;
 }
 
@@ -107,7 +107,7 @@ bool rk_seqLoadSequence(void)
     }
     zGetBasename( opt[OPT_ZVSFILE].arg, seqfilebase, BUFSIZ );
   }
-  if( !( poselist = zIndexCreate( zListNum(&seq) ) ) ){
+  if( !( poselist = zIndexCreate( zListSize(&seq) ) ) ){
     zSeqFree( &seq );
     return false;
   }
@@ -194,14 +194,14 @@ void rk_seqInit(void)
   rkglShadowInit( &shadow, atoi(opt[OPT_SHADOW_SIZE].arg), atoi(opt[OPT_SHADOW_SIZE].arg), atof(opt[OPT_SHADOW_AREA].arg), 0.2 );
 
   rkglChainAttrInit( &attr );
-  if( !rkChainScanFile( &chain, opt[OPT_MODELFILE].arg ) ||
+  if( !rkChainReadZTK( &chain, opt[OPT_MODELFILE].arg ) ||
       !rkglChainLoad( &gc, &chain, &attr ) ){
     ZOPENERROR( opt[OPT_MODELFILE].arg );
     rk_seqUsage();
     exit( 1 );
   }
   if( opt[OPT_ENVFILE].flag ){
-    if( !zMShape3DScanFile( &envshape, opt[OPT_ENVFILE].arg ) ){
+    if( !zMShape3DReadZTK( &envshape, opt[OPT_ENVFILE].arg ) ){
       ZOPENERROR( opt[OPT_ENVFILE].arg );
       rk_seqUsage();
       exit( 1 );
