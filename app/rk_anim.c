@@ -2,7 +2,7 @@
 
 #include <roki-gl/roki-gl.h>
 #include <roki-gl/rkgl_glx.h>
-#include <zx11/zximage_png.h>
+#include <zx11/zximage.h>
 #include <liw/liw_paction.h>
 
 #define RK_ANIM_TITLE "RK-ANIM"
@@ -111,7 +111,7 @@ bool rkAnimCellLoadChain(char chainfile[], rkglChainAttr *attr)
     return false;
   }
   if( !rkChainReadZTK( &cell->data.chain, chainfile ) ||
-      !rkglChainLoad( &cell->data.gc, &cell->data.chain, attr ) ){
+      !rkglChainLoad( &cell->data.gc, &cell->data.chain, attr, &light ) ){
     ZOPENERROR( chainfile );
     zFree( cell );
     return false;
@@ -243,7 +243,7 @@ void rkAnimCapture(void)
 
   sprintf( imgfile, "%s%0.3f.png", opt[OPT_TITLE].arg, t_resume );
   zxImageAllocDefault( &img, zxWindowWidth(&win), zxWindowHeight(&win) );
-  zxImageFromPixmap( &img, zxCanvas(&win), img.width, img.height );
+  zxImageFromPixmap( &img, zxWindowCanvas(&win), img.width, img.height );
   zxImageWritePNGFile( &img, imgfile );
   zxImageDestroy( &img );
 }
@@ -382,7 +382,7 @@ void rkAnimDraw(void)
 
 void rkAnimDisplay(void)
 {
-  rkglActivateGLX( glwin );
+  rkglWindowActivateGLX( glwin );
   if( opt[OPT_SHADOW].flag ){
     /* shadow-map rendering */
     rkglShadowDraw( &shadow, &cam, &light, rkAnimDraw );
@@ -393,7 +393,7 @@ void rkAnimDisplay(void)
     rkglLightPut( &light );
     rkAnimDraw();
   }
-  rkglSwapBuffersGLX( glwin );
+  rkglWindowSwapBuffersGLX( glwin );
   rkglFlushGLX();
 }
 
@@ -421,7 +421,7 @@ void rkAnimLoadEnv(void)
     rkAnimUsage();
     exit( 1 );
   }
-  if( !rkglChainLoad( &ge, &chain_env, &attr ) ) exit( 1 );
+  if( !rkglChainLoad( &ge, &chain_env, &attr, &light ) ) exit( 1 );
 
   env = rkglBeginList();
   rkglChainDraw( &ge );
@@ -450,17 +450,16 @@ void rkAnimInit(void)
   }
   zxWindowSetTitle( &win, RK_ANIM_TITLE );
   zxWindowOpen( &win );
-  zxWindowSetBG( &win, (char *)"lightgray" );
-  zxWindowSetFG( &win, (char *)"black" );
-  zxWindowClear( &win );
-  zxSetFont( &win, "-misc-fixed-medium-r-normal-*-40-*-*-*-*-*-*-*" );
+  zxWindowSetBGColorByName( &win, "lightgray" );
+  zxWindowSetColorByName( &win, "black" );
+  zxWindowSetFont( &win, "-misc-fixed-medium-r-normal-*-40-*-*-*-*-*-*-*" );
 
   if( opt[OPT_NOTIMESTAMP].flag )
     glwin = rkglWindowCreateGLX( &win, 0, 0, width, height, NULL );
   else
     glwin = rkglWindowCreateGLX( &win, RK_ANIM_SIDE_SPACE, RK_ANIM_TOP_SPACE, width, height, NULL );
-  rkglKeyEnableGLX( glwin );
-  rkglMouseEnableGLX( glwin );
+  rkglWindowKeyEnableGLX( glwin );
+  rkglWindowMouseEnableGLX( glwin );
   rkglWindowOpenGLX( glwin );
 
   zRGBDec( &rgb, opt[OPT_BG].arg );
@@ -476,6 +475,7 @@ void rkAnimInit(void)
   rkglLightSetPos( &light,
     atof(opt[OPT_LX].arg), atof(opt[OPT_LY].arg), atof(opt[OPT_LZ].arg) );
   rkglShadowInit( &shadow, atoi(opt[OPT_SHADOW_SIZE].arg), atoi(opt[OPT_SHADOW_SIZE].arg), atof(opt[OPT_SHADOW_AREA].arg), 0.2 );
+  rkglTextureEnable();
 
   if( opt[OPT_ENVFILE].flag ) rkAnimLoadEnv();
   if( opt[OPT_SMOOTH].flag ) glEnable( GL_LINE_SMOOTH );
@@ -507,7 +507,7 @@ void rkAnimExit(void)
   rkAnimCellListDestroy();
   if( env ) rkChainDestroy( &chain_env );
   rkglWindowCloseGLX( glwin );
-  rkglCloseGLX();
+  rkglExitGLX();
   zxWindowDestroy( &win );
 }
 
@@ -538,75 +538,8 @@ void rkAnimReshape(void)
     double x, y;
     x = 0.1;
     y = x / rkglVPAspect(&cam);
-    /* rkglFrustum( &cam, -x, x, -y, y, 1, 20 ); */
     rkglFrustum( &cam, -x, x, -y, y, 1, 200 );
   }
-}
-
-enum{ RK_ANIM_CAM_ROT, RK_ANIM_CAM_PAN, RK_ANIM_CAM_ZOOM };
-
-static int mouse_button = -1;
-static int mousex, mousey;
-static byte cammode = RK_ANIM_CAM_ROT;
-
-void rkAnimStoreMouseInfo(byte mode)
-{
-  mouse_button = zxMouseButton;
-  mousex = zxMouseX;
-  mousey = zxMouseY;
-  cammode = mode;
-}
-
-void rkAnimMousePress(void)
-{
-  switch( zxMouseButton ){
-  case Button1: rkAnimStoreMouseInfo( RK_ANIM_CAM_ROT );  break;
-  case Button3: rkAnimStoreMouseInfo( RK_ANIM_CAM_PAN );  break;
-  case Button2: rkAnimStoreMouseInfo( RK_ANIM_CAM_ZOOM ); break;
-  case Button4:
-    rkglCARelMove( &cam,-0.1, 0, 0 ); rkAnimDisplay();    break;
-  case Button5:
-    rkglCARelMove( &cam, 0.1, 0, 0 ); rkAnimDisplay();    break;
-  default: ;
-  }
-}
-
-void rkAnimMouseRelease(void)
-{
-  mouse_button = -1;
-}
-
-void rkAnimMouseDrag(void)
-{
-  double dx, dy, r;
-
-  if( mouse_button == -1 ) return;
-  dx = (double)( zxMouseX - mousex ) / cam.vp[3];
-  dy =-(double)( zxMouseY - mousey ) / cam.vp[2];
-  switch( cammode ){
-  case RK_ANIM_CAM_ROT:
-    r = 180 * sqrt( dx*dx + dy*dy );
-    zxModkeyCtrlIsOn() ?
-      rkglCARotate( &cam, r, -dy, dx, 0 ) :
-      rkglCALockonRotate( &cam, r, -dy, dx, 0 );
-    rkAnimRedisplay();
-    break;
-  case RK_ANIM_CAM_PAN:
-    zxModkeyCtrlIsOn() ?
-      rkglCAMove( &cam, 0, dx, dy ) :
-      rkglCARelMove( &cam, 0, dx, dy );
-    rkAnimRedisplay();
-    break;
-  case RK_ANIM_CAM_ZOOM:
-    zxModkeyCtrlIsOn() ?
-      rkglCAMove( &cam, -dy, 0, 0 ) :
-      rkglCARelMove( &cam, -2*dy, 0, 0 );
-    rkAnimRedisplay();
-    break;
-  default: ;
-  }
-  mousex = zxMouseX;
-  mousey = zxMouseY;
 }
 
 int rkAnimKeyPress(void)
@@ -626,38 +559,27 @@ int rkAnimKeyPress(void)
     rkAnimDisplay();
     break;
   case XK_p: case XK_P: case XK_space:
-    pa.is_running ? liwPActionStop( &pa ) : liwPActionStart( &pa );
-    break;
-  case XK_f: case XK_F:
-    rkAnimForward( 0 );
-    break;
-  case XK_b: case XK_B:
-    rkAnimBackward( 0 );
-    break;
-  case XK_r: case XK_R:
-    rkAnimRewind( 0 );
-    break;
-  case XK_c: case XK_C:
-    rkAnimCapture();
-    break;
-  case XK_o: case XK_O:
-    rkAnimGetCamFrame();
-    break;
-  case XK_q: case XK_Q:
-    eprintf( "quit.\n" );
-    return -1;
+    pa.is_running ? liwPActionStop( &pa ) : liwPActionStart( &pa );  break;
+  case XK_f: case XK_F: rkAnimForward( 0 );   break;
+  case XK_b: case XK_B: rkAnimBackward( 0 );  break;
+  case XK_r: case XK_R: rkAnimRewind( 0 );    break;
+  case XK_c: case XK_C: rkAnimCapture();      break;
+  case XK_o: case XK_O: rkAnimGetCamFrame();  break;
+  case XK_q: case XK_Q: eprintf( "quit.\n" ); return -1;
   }
   return 0;
 }
 
 int rkAnimEvent(void)
 {
-  switch( zxDequeueEvent() ){
+  int event;
+
+  switch( ( event = zxDequeueEvent() ) ){
   case Expose:
   case ConfigureNotify: rkAnimReshape();              break;
-  case ButtonPress:     rkAnimMousePress();           break;
-  case MotionNotify:    rkAnimMouseDrag();            break;
-  case ButtonRelease:   rkAnimMouseRelease();         break;
+  case ButtonPress:
+  case ButtonRelease:   rkglMouseFuncGLX( &cam, event, 1.0 ); break;
+  case MotionNotify:    rkglMouseDragFuncGLX( &cam ); break;
   case KeyPress:        if( rkAnimKeyPress() >= 0 )   break; return -1;
   case KeyRelease:      zxModkeyOff( zxKeySymbol() ); break;
   default: ;

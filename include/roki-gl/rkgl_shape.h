@@ -8,13 +8,14 @@
 #define __RKGL_SHAPE_H__
 
 #include <roki-gl/rkgl_optic.h>
+#include <roki-gl/rkgl_texture.h>
 #include <zeo/zeo_pointcloud.h>
 #include <zeo/zeo_mshape.h>
 
 __BEGIN_DECLS
 
 enum{
-  RKGL_FACE=0,
+  RKGL_FACE = 0,
   RKGL_WIREFRAME,
   RKGL_STICK,
   RKGL_COM,
@@ -38,6 +39,8 @@ void rkglXform(zFrame3D *f);
 void rkglPoint(zVec3D *p);
 void rkglEdge(zEdge3D *e);
 void rkglTri(zTri3D *t);
+void rkglTriTexture(zTri3D *t, zTri2D *f);
+void rkglTriBump(zTri3D *t, zTri2D *f, zVec3D *lp);
 void rkglPolygon(zVec3D v[], int n, ...);
 
 void rkglBox(zBox3D *box, int disptype);
@@ -53,12 +56,14 @@ void rkglNURBS(zNURBS3D *nurbs, int disptype);
 void rkglNURBSCP(zNURBS3D *nurbs, GLfloat size, zRGB *rgb);
 
 void rkglPH(zPH3D *ph, int disptype);
+void rkglPHTexture(zPH3D *ph, zOpticalInfo *oi, zTexture *texture);
+void rkglPHBump(zPH3D *ph, zOpticalInfo *oi, zTexture *bump, rkglLight *light);
 
-void rkglShape(zShape3D *s, zOpticalInfo *oi_alt, int disptype);
-int rkglShapeEntry(zShape3D *s, zOpticalInfo *oi_alt, int disptype);
+void rkglShape(zShape3D *s, zOpticalInfo *oi_alt, int disptype, rkglLight *light);
+int rkglShapeEntry(zShape3D *s, zOpticalInfo *oi_alt, int disptype, rkglLight *light);
 
-void rkglMShape(zMShape3D *s, int disptype);
-int rkglMShapeEntry(zMShape3D *s, int disptype);
+void rkglMShape(zMShape3D *s, int disptype, rkglLight *light);
+int rkglMShapeEntry(zMShape3D *s, int disptype, rkglLight *light);
 
 void rkglPointCloud(zVec3DList *pc, zVec3D *center, short size);
 

@@ -3,7 +3,7 @@
 #include <zm/zm_seq.h>
 #include <roki-gl/roki-gl.h>
 #include <roki-gl/rkgl_glx.h>
-#include <zx11/zximage_png.h>
+#include <zx11/zximage.h>
 
 #define RK_SEQ_TITLE "RK-SEQ"
 
@@ -142,7 +142,7 @@ void rk_seqDraw(void)
 
 void rk_seqDisplay(void)
 {
-  rkglActivateGLX( win );
+  rkglWindowActivateGLX( win );
   if( opt[OPT_SHADOW].flag ){
     /* shadow-map rendering */
     rkglShadowDraw( &shadow, &cam, &light, rk_seqDraw );
@@ -153,7 +153,7 @@ void rk_seqDisplay(void)
     rkglLightPut( &light );
     rk_seqDraw();
   }
-  rkglSwapBuffersGLX( win );
+  rkglWindowSwapBuffersGLX( win );
   rkglFlushGLX();
 }
 
@@ -175,8 +175,8 @@ void rk_seqInit(void)
   zMShape3D envshape;
 
   win = rkglWindowCreateGLX( NULL, 0, 0, atoi(opt[OPT_WIDTH].arg), atoi(opt[OPT_HEIGHT].arg), RK_SEQ_TITLE );
-  rkglKeyEnableGLX( win );
-  rkglMouseEnableGLX( win );
+  rkglWindowKeyEnableGLX( win );
+  rkglWindowMouseEnableGLX( win );
   rkglWindowOpenGLX( win );
 
   zRGBDec( &rgb, opt[OPT_BG].arg );
@@ -192,10 +192,11 @@ void rk_seqInit(void)
   rkglLightSetPos( &light,
     atof(opt[OPT_LX].arg), atof(opt[OPT_LY].arg), atof(opt[OPT_LZ].arg) );
   rkglShadowInit( &shadow, atoi(opt[OPT_SHADOW_SIZE].arg), atoi(opt[OPT_SHADOW_SIZE].arg), atof(opt[OPT_SHADOW_AREA].arg), 0.2 );
+  rkglTextureEnable();
 
   rkglChainAttrInit( &attr );
   if( !rkChainReadZTK( &chain, opt[OPT_MODELFILE].arg ) ||
-      !rkglChainLoad( &gc, &chain, &attr ) ){
+      !rkglChainLoad( &gc, &chain, &attr, &light ) ){
     ZOPENERROR( opt[OPT_MODELFILE].arg );
     rk_seqUsage();
     exit( 1 );
@@ -206,7 +207,7 @@ void rk_seqInit(void)
       rk_seqUsage();
       exit( 1 );
     }
-    env = rkglMShapeEntry( &envshape, attr.disptype );
+    env = rkglMShapeEntry( &envshape, attr.disptype, &light );
     zMShape3DDestroy( &envshape );
     if( env < 0 ) exit( 1 );
   }
@@ -225,7 +226,7 @@ void rk_seqExit(void)
   rkglChainUnload( &gc );
   rkChainDestroy( &chain );
   rkglWindowCloseGLX( win );
-  rkglCloseGLX();
+  rkglExitGLX();
 }
 
 void rk_seqCapture(void)
@@ -255,72 +256,6 @@ void rk_seqReshape(void)
   rkglFrustum( &cam, -x, x, -y, y, 1, 20 );
 }
 
-enum{ RK_SEQ_CAM_ROT, RK_SEQ_CAM_PAN, RK_SEQ_CAM_ZOOM };
-
-static int mouse_button = -1;
-static int mousex, mousey;
-static byte cammode = RK_SEQ_CAM_ROT;
-
-void rk_seqStoreMouseInfo(byte mode)
-{
-  mouse_button = zxMouseButton;
-  mousex = zxMouseX;
-  mousey = zxMouseY;
-  cammode = mode;
-}
-
-void rk_seqMousePress(void)
-{
-  switch( zxMouseButton ){
-  case Button1: rk_seqStoreMouseInfo( RK_SEQ_CAM_ROT );  break;
-  case Button3: rk_seqStoreMouseInfo( RK_SEQ_CAM_PAN );  break;
-  case Button2: rk_seqStoreMouseInfo( RK_SEQ_CAM_ZOOM ); break;
-  case Button4:
-    rkglCARelMove( &cam,-0.1, 0, 0 ); rk_seqRedisplay(); break;
-  case Button5:
-    rkglCARelMove( &cam, 0.1, 0, 0 ); rk_seqRedisplay(); break;
-  default: ;
-  }
-}
-
-void rk_seqMouseRelease(void)
-{
-  mouse_button = -1;
-}
-
-void rk_seqMouseDrag(void)
-{
-  double dx, dy, r;
-
-  if( mouse_button == -1 ) return;
-  dx = (double)( zxMouseX - mousex ) / cam.vp[3];
-  dy =-(double)( zxMouseY - mousey ) / cam.vp[2];
-  switch( cammode ){
-  case RK_SEQ_CAM_ROT:
-    r = 180 * sqrt( dx*dx + dy*dy );
-    zxModkeyCtrlIsOn() ?
-      rkglCARotate( &cam, r, -dy, dx, 0 ) :
-      rkglCALockonRotate( &cam, r, -dy, dx, 0 );
-    rk_seqRedisplay();
-    break;
-  case RK_SEQ_CAM_PAN:
-    zxModkeyCtrlIsOn() ?
-      rkglCAMove( &cam, 0, dx, dy ) :
-      rkglCARelMove( &cam, 0, dx, dy );
-    rk_seqRedisplay();
-    break;
-  case RK_SEQ_CAM_ZOOM:
-    zxModkeyCtrlIsOn() ?
-      rkglCAMove( &cam, -dy, 0, 0 ) :
-      rkglCARelMove( &cam, -2*dy, 0, 0 );
-    rk_seqRedisplay();
-    break;
-  default: ;
-  }
-  mousex = zxMouseX;
-  mousey = zxMouseY;
-}
-
 int rk_seqKeyPress(void)
 {
   zxModkeyOn( zxKeySymbol() );
@@ -333,14 +268,16 @@ int rk_seqKeyPress(void)
 
 int rk_seqEvent(void)
 {
-  switch( zxDequeueEvent() ){
+  int event;
+
+  switch( ( event = zxDequeueEvent() ) ){
   case Expose:
-  case ConfigureNotify: rk_seqReshape();            break;
-  case ButtonPress:     rk_seqMousePress();         break;
-  case MotionNotify:    rk_seqMouseDrag();          break;
-  case ButtonRelease:   rk_seqMouseRelease();       break;
-  case KeyPress:        if( rk_seqKeyPress() >= 0 ) break; return -1;
-  case KeyRelease: zxModkeyOff( zxKeySymbol() );    break;
+  case ConfigureNotify: rk_seqReshape();              break;
+  case ButtonPress:
+  case ButtonRelease:   rkglMouseFuncGLX( &cam, event, 1.0 ); break;
+  case MotionNotify:    rkglMouseDragFuncGLX( &cam ); break;
+  case KeyPress:        if( rk_seqKeyPress() >= 0 )   break; return -1;
+  case KeyRelease: zxModkeyOff( zxKeySymbol() );      break;
   default: ;
   }
   return 0;

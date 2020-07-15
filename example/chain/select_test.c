@@ -42,7 +42,7 @@ void select_link(GLuint selbuf[], int hits)
   selected_link = ns[3]; /* simple reference to link name */
   zOpticalInfoCreateSimple( &oi_alt, 1.0, 0.0, 0.0, NULL );
   gr.attr.disptype = RKGL_FACE;
-  rkglChainLinkAlt( &gr, selected_link, &oi_alt, &gr.attr );
+  rkglChainLinkAlt( &gr, selected_link, &oi_alt, &gr.attr, &light );
 }
 
 void move_link(double angle)
@@ -110,8 +110,8 @@ void init(void)
   rkglLightSetPos( &light, 1, 3, 6 );
 
   rkglChainAttrInit( &attr );
-  rkChainScanFile( &chain, "../model/puma.ztk" );
-  rkglChainLoad( &gr, &chain, &attr );
+  rkChainReadZTK( &chain, "../model/puma.ztk" );
+  rkglChainLoad( &gr, &chain, &attr, &light );
 }
 
 void idle(void){ glutPostRedisplay(); }

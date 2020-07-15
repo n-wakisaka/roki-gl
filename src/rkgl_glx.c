@@ -70,7 +70,7 @@ int rkglInitGLX(void)
   return 0;
 }
 
-void rkglCloseGLX(void)
+void rkglExitGLX(void)
 {
   XFreeColormap( zxdisplay, _rkgl_cmap_glx );
   glXDestroyContext( zxdisplay, rkgl_ctx );
@@ -83,15 +83,14 @@ Window rkglWindowCreateGLX(zxWindow *parent, int x, int y, int w, int h, const c
 
   zxDefaultSetWindowAttributes( &attr );
   attr.colormap = _rkgl_cmap_glx;
-  win =
-    XCreateWindow( zxdisplay,
-      parent ? zxWindowBody(parent) : zxrootwindow,
-      x, y, w, h, 0, _rkgl_vi_glx->depth,
-      InputOutput, _rkgl_vi_glx->visual,
-      CWBackPixel | CWBorderPixel | CWColormap | CWEventMask | CWBackingStore | CWOverrideRedirect,
-      &attr );
+  win = XCreateWindow( zxdisplay,
+    parent ? zxWindowBody(parent) : zxrootwindow,
+    x, y, w, h, 0, _rkgl_vi_glx->depth,
+    InputOutput, _rkgl_vi_glx->visual,
+    CWBackPixel | CWBorderPixel | CWColormap | CWEventMask | CWBackingStore | CWOverrideRedirect,
+    &attr );
   XStoreName( zxdisplay, win, title );
-  rkglActivateGLX( win );
+  rkglWindowActivateGLX( win );
   rkglEnableDefault();
   return win;
 }
@@ -101,8 +100,7 @@ void rkglWindowAddEventGLX(Window win, long event)
   XWindowAttributes attr;
 
   XGetWindowAttributes( zxdisplay, win, &attr );
-  XSelectInput( zxdisplay, win,
-    attr.all_event_masks | attr.your_event_mask | event );
+  XSelectInput( zxdisplay, win, attr.all_event_masks | attr.your_event_mask | event );
 }
 
 /* default callback functions */
@@ -117,29 +115,22 @@ void rkglReshapeGLX(rkglCamera *cam, int w, int h, double vvwidth, double vvnear
   rkglFrustum( cam, -x, x, -y, y, vvnear, vvfar );
 }
 
-int rkglKeyFuncGLX(rkglCamera *cam, KeySym key, int x, int y, double dl, double da)
+int rkglKeyFuncGLX(rkglCamera *cam, double dl, double da)
 {
-  switch( key ){
-  case XK_h: zxModkeyShiftIsOn() ?
-    rkglCAMove( cam, 0,-dl, 0 ) : rkglCARelMove( cam, 0,-dl, 0 ); break;
-  case XK_l: zxModkeyShiftIsOn() ?
-    rkglCAMove( cam, 0, dl, 0 ) : rkglCARelMove( cam, 0, dl, 0 ); break;
-  case XK_k: zxModkeyShiftIsOn() ?
-    rkglCAMove( cam, 0, 0, dl ) : rkglCARelMove( cam, 0, 0, dl ); break;
-  case XK_j: zxModkeyShiftIsOn() ?
-    rkglCAMove( cam, 0, 0,-dl ) : rkglCARelMove( cam, 0, 0,-dl ); break;
+  KeySym key;
+  switch( ( key = zxKeySymbol() ) ){
+  case XK_h:     rkglCARelMoveLeft(  cam, dl ); break;
+  case XK_l:     rkglCARelMoveRight( cam, dl ); break;
+  case XK_k:     rkglCARelMoveUp(    cam, dl ); break;
+  case XK_j:     rkglCARelMoveDown(  cam, dl ); break;
   case XK_z: zxModkeyShiftIsOn() ?
-    rkglCARelMove( cam, dl, 0, 0 ) : rkglCARelMove( cam,-dl, 0, 0 ); break;
-  case XK_Up: zxModkeyCtrlIsOn() ?
-    rkglCALockonPTR( cam, 0,-da, 0 ) : rkglCAPTR( cam, 0, da, 0 ); break;
-  case XK_Down: zxModkeyCtrlIsOn() ?
-    rkglCALockonPTR( cam, 0, da, 0 ) : rkglCAPTR( cam, 0,-da, 0 ); break;
-  case XK_Left: zxModkeyCtrlIsOn() ?
-    rkglCALockonPTR( cam,-da, 0, 0 ) : rkglCAPTR( cam, da, 0, 0 ); break;
-  case XK_Right: zxModkeyCtrlIsOn() ?
-    rkglCALockonPTR( cam, da, 0, 0 ) : rkglCAPTR( cam,-da, 0, 0 ); break;
+                 rkglCAZoomOut( cam, dl ) : rkglCAZoomIn( cam, dl );  break;
+  case XK_Up:    rkglKeyCARotateUp(    cam, da, zxModkeyCtrlIsOn() ); break;
+  case XK_Down:  rkglKeyCARotateDown(  cam, da, zxModkeyCtrlIsOn() ); break;
+  case XK_Left:  rkglKeyCARotateLeft(  cam, da, zxModkeyCtrlIsOn() ); break;
+  case XK_Right: rkglKeyCARotateRight( cam, da, zxModkeyCtrlIsOn() ); break;
   case XK_Q: case XK_q: case XK_Escape:
-    rkglCloseGLX();
+    rkglExitGLX();
     return -1;
   default:
     if( !zxModkeyOn( key ) );
@@ -147,43 +138,26 @@ int rkglKeyFuncGLX(rkglCamera *cam, KeySym key, int x, int y, double dl, double 
   return 0;
 }
 
-static int _glx_mouse_button, _glx_mouse_x, _glx_mouse_y;
-static int _glx_key_mod;
-
-void rkglMouseFuncGLX(int button, int state, int x, int y)
+void rkglMouseFuncGLX(rkglCamera *cam, int event, double dl)
 {
-  _glx_mouse_button = state == ButtonPress ? button : -1;
-  _glx_mouse_x = x;
-  _glx_mouse_y = y;
-  _glx_key_mod = zxModkey();
-}
-
-int rkglMouseDragFuncGLX(rkglCamera *cam, int x, int y)
-{
-  double dx, dy, r;
-
-  dx = (double)( x - _glx_mouse_x ) / cam->vp[3];
-  dy =-(double)( y - _glx_mouse_y ) / cam->vp[2];
-  switch( _glx_mouse_button ){
-  case Button1:
-    r = 180 * sqrt( dx*dx + dy*dy );
-    _glx_key_mod & ZX_MODKEY_CTRL ?
-      rkglCALockonRotate( cam, r, -dy, dx, 0 ) :
-      rkglCARotate( cam, r, -dy, dx, 0 );
-    break;
-  case Button3:
-    _glx_key_mod & ZX_MODKEY_CTRL ?
-      rkglCARelMove( cam, 0, dx, dy ) :
-      rkglCAMove( cam, 0, dx, dy );
-    break;
-  case Button2:
-    _glx_key_mod & ZX_MODKEY_CTRL ?
-      rkglCARelMove( cam, -dy, 0, 0 ) :
-      rkglCAMove( cam, -dy, 0, 0 );
-    break;
+  rkglMouseStoreInput( zxMouseButton, event, ButtonPress, zxMouseX, zxMouseY, zxModkey() );
+  switch( rkgl_mouse_button ){
+  case Button4: rkglCAZoomIn( cam, dl ); break;
+  case Button5: rkglCAZoomOut(  cam, dl ); break;
   default: ;
   }
-  _glx_mouse_x = x;
-  _glx_mouse_y = y;
-  return _glx_mouse_button;
+}
+
+void rkglMouseDragFuncGLX(rkglCamera *cam)
+{
+  double dx, dy;
+
+  rkglMouseDragGetIncrementer( cam, zxMouseX, zxMouseY, &dx, &dy );
+  switch( rkgl_mouse_button ){
+  case Button1: rkglMouseDragCARotate(    cam, dx, dy, ZX_MODKEY_CTRL ); break;
+  case Button3: rkglMouseDragCATranslate( cam, dx, dy, ZX_MODKEY_CTRL ); break;
+  case Button2: rkglMouseDragCAZoom(      cam, dx, dy, ZX_MODKEY_CTRL ); break;
+  default: ;
+  }
+  rkglMouseStoreXY( zxMouseX, zxMouseY );
 }
