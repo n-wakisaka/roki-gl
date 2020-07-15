@@ -32,8 +32,8 @@ void init(void)
   rkglLightCreate( &light, 0, 0.4, 0.4, 0.4, 1, 1, 1, 0, 0, 0, 0 );
   rkglLightSetPos( &light, 1, 3, 6 );
 
-  zMShape3DScanFile( &ms, "../model/scc.tkf" );
-  ms_id = rkglMShapeEntry( &ms, RKGL_FACE );
+  zMShape3DReadZTK( &ms, "../model/scc.ztk" );
+  ms_id = rkglMShapeEntry( &ms, RKGL_FACE, &light );
 }
 
 int main(int argc, char *argv[])

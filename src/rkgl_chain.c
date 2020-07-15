@@ -30,7 +30,7 @@ void rkglChainAttrCopy(rkglChainAttr *src, rkglChainAttr *dest)
   dest->ellips_mag = src->ellips_mag;
 }
 
-bool rkglChainLoad(rkglChain *gc, rkChain *c, rkglChainAttr *attr)
+bool rkglChainLoad(rkglChain *gc, rkChain *c, rkglChainAttr *attr, rkglLight *light)
 {
   register int i;
 
@@ -41,7 +41,7 @@ bool rkglChainLoad(rkglChain *gc, rkChain *c, rkglChainAttr *attr)
     return false;
   }
   for( i=0; i<rkChainLinkNum(gc->chain); i++ ){
-    gc->info[i].list = rkglLinkEntry( rkChainLink(gc->chain,i), NULL, &gc->attr );
+    gc->info[i].list = rkglLinkEntry( rkChainLink(gc->chain,i), NULL, &gc->attr, light );
     gc->info[i].list_alt = -1;
     gc->info[i].visible = ( gc->info[i].list >= 0 ) ? true : false;
   }
@@ -70,7 +70,7 @@ void rkglLinkStick(rkLink *l, rkglChainAttr *attr)
   zSphere3D js;
 
   zOpticalInfoCreateSimple( &oi, 1.0, 1.0, 1.0, NULL );
-  rkglMaterial( &oi );
+  rkglMaterialOpticalInfo( &oi );
   if( rkLinkJoint(l)->com == &rk_joint_revol ){
     zVec3DCreate( &z1, 0, 0,-attr->bone_r * 4 );
     zVec3DCreate( &z2, 0, 0, attr->bone_r * 4 );
@@ -100,11 +100,11 @@ void rkglLinkCOM(rkLink *l, rkglChainAttr *attr)
   double br;
 
   zOpticalInfoCreateSimple( &oi, 0.4, 0.7, 1.0, NULL );
-  rkglMaterial( &oi );
+  rkglMaterialOpticalInfo( &oi );
   zSphere3DCreate( &com, rkLinkCOM(l), attr->com_r, 0 );
   rkglSphere( &com, RKGL_FACE );
   zOpticalInfoCreateSimple( &oi, 1.0, 1.0, 1.0, NULL );
-  rkglMaterial( &oi );
+  rkglMaterialOpticalInfo( &oi );
   br = attr->com_r / 3;
   for( child=rkLinkChild(l); child; child=rkLinkSibl(child) ){
     zCyl3DCreate( &bone, ZVEC3DZERO, rkLinkAdjPos(child), br, 0 );
@@ -118,7 +118,7 @@ void rkglLinkInertiaEllips(rkLink *l, rkglChainAttr *attr)
   zEllips3D e;
 
   zOpticalInfoCreateSimple( &oi, 1.0, 0.8, 0.4, NULL );
-  rkglMaterial( &oi );
+  rkglMaterialOpticalInfo( &oi );
   rkLinkInertiaEllips( l, &e );
   zEllips3DRadius(&e,0) *= attr->ellips_mag;
   zEllips3DRadius(&e,1) *= attr->ellips_mag;
@@ -126,7 +126,7 @@ void rkglLinkInertiaEllips(rkLink *l, rkglChainAttr *attr)
   rkglEllips( &e, RKGL_FACE );
 }
 
-int rkglLinkEntry(rkLink *l, zOpticalInfo *oi_alt, rkglChainAttr *attr)
+int rkglLinkEntry(rkLink *l, zOpticalInfo *oi_alt, rkglChainAttr *attr, rkglLight *light)
 {
   zShapeListCell *sp;
   int result;
@@ -151,20 +151,20 @@ int rkglLinkEntry(rkLink *l, zOpticalInfo *oi_alt, rkglChainAttr *attr)
     if( rkLinkShapeIsEmpty( l ) ) return -1;
     result = rkglBeginList();
       zListForEach( rkLinkShapeList(l), sp )
-        rkglShape( zShapeListCellShape(sp), oi_alt, attr->disptype );
+        rkglShape( zShapeListCellShape(sp), oi_alt, attr->disptype, light );
     glEndList();
   }
   return result;
 }
 
-void rkglChainLinkAlt(rkglChain *gc, int id, zOpticalInfo *oi_alt, rkglChainAttr *attr)
+void rkglChainLinkAlt(rkglChain *gc, int id, zOpticalInfo *oi_alt, rkglChainAttr *attr, rkglLight *light)
 {
   if( gc->info[id].list_alt >= 0 )
     glDeleteLists( gc->info[id].list, 1 );
   else
     gc->info[id].list_alt = gc->info[id].list;
 
-  gc->info[id].list = rkglLinkEntry( rkChainLink(gc->chain,id), oi_alt, attr );
+  gc->info[id].list = rkglLinkEntry( rkChainLink(gc->chain,id), oi_alt, attr, light );
 }
 
 void rkglChainLinkReset(rkglChain *gc, int id)
@@ -212,7 +212,7 @@ void rkglChainNamedDraw(rkglChain *gc, GLuint name)
   glPopName();
 }
 
-int rkglChainDrawSeethru(rkglChain *gc, double alpha)
+int rkglChainDrawSeethru(rkglChain *gc, double alpha, rkglLight *light)
 {
   rkLink *l;
   zShapeListCell *sp;
@@ -229,7 +229,7 @@ int rkglChainDrawSeethru(rkglChain *gc, double alpha)
     zListForEach( rkLinkShapeList(l), sp ){
       zOpticalInfoCopy( zShape3DOptic(zShapeListCellShape(sp)), &oi );
       oi.alpha = alpha;
-      rkglShape( zShapeListCellShape(sp), &oi, RKGL_FACE );
+      rkglShape( zShapeListCellShape(sp), &oi, RKGL_FACE, light );
     }
     glPopMatrix();
   }
@@ -243,7 +243,7 @@ void rkglChainCOMDraw(rkglChain *gc, double r)
   zSphere3D com;
 
   zOpticalInfoCreateSimple( &oi, 0.0, 0.0, 1.0, NULL );
-  rkglMaterial( &oi );
+  rkglMaterialOpticalInfo( &oi );
   zSphere3DCreate( &com, rkChainWldCOM(gc->chain), r, 0 );
   rkglSphere( &com, RKGL_FACE );
 }

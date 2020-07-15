@@ -383,6 +383,7 @@ void rk_penInit(void)
   rkglLightSetPos( &light,
     atof(opt[OPT_LX].arg), atof(opt[OPT_LY].arg), atof(opt[OPT_LZ].arg) );
   rkglShadowInit( &shadow, 1024, 1024, 2, 0.2 );
+  rkglTextureEnable();
 
   rkglChainAttrInit( &attr );
   if( opt[OPT_WIREFRAME].flag ) attr.disptype = RKGL_WIREFRAME;
@@ -396,7 +397,7 @@ void rk_penInit(void)
     attr.ellips_mag = atof( opt[OPT_ELLIPS].arg );
   }
   if( !rkChainReadZTK( &chain, opt[OPT_MODELFILE].arg ) ||
-      !rkglChainLoad( &gr, &chain, &attr ) )
+      !rkglChainLoad( &gr, &chain, &attr, &light ) )
     exit( 1 );
 
   if( opt[OPT_ENVFILE].flag ){
@@ -407,7 +408,7 @@ void rk_penInit(void)
     }
     if( attr.disptype == RKGL_STICK || attr.disptype == RKGL_ELLIPS )
       attr.disptype = RKGL_FACE;
-    env = rkglMShapeEntry( &envshape, attr.disptype );
+    env = rkglMShapeEntry( &envshape, attr.disptype, &light );
     zMShape3DDestroy( &envshape );
     if( env < 0 ) exit( 1 );
   }

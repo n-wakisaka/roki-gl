@@ -18,9 +18,9 @@ rkglShadow shadow;
 
 void display(Window win)
 {
-  rkglActivateGLX( win );
+  rkglWindowActivateGLX( win );
   rkglShadowDraw( &shadow, &cam, &light, scene );
-  rkglSwapBuffersGLX( win );
+  rkglWindowSwapBuffersGLX( win );
   rkglFlushGLX();
 }
 
@@ -58,7 +58,7 @@ void init(void)
     zVec3DCreate( &c1, 0, 0, 0 );
     zSphere3DCreate( &sphere3d, &c1, 1, 0 );
     rkglMaterial( &red );
-    rkglSphere( &sphere3d );
+    rkglSphere( &sphere3d, RKGL_FACE );
   glEndList();
 
   cylinder = rkglBeginList();
@@ -67,7 +67,7 @@ void init(void)
     zVec3DCreate( &c2, 0, 1, 1.5 );
     zCyl3DCreate( &cylinder3d, &c1, &c2, 0.5, 0 );
     rkglMaterial( &cyan );
-    rkglCyl( &cylinder3d );
+    rkglCyl( &cylinder3d, RKGL_FACE );
   glEndList();
 
   cone = rkglBeginList();
@@ -76,7 +76,7 @@ void init(void)
     zVec3DCreate( &c2, 0,-1, 1 );
     zCone3DCreate( &cone3d, &c1, &c2, 1, 0 );
     rkglMaterial( &yellow );
-    rkglCone( &cone3d );
+    rkglCone( &cone3d, RKGL_FACE );
   glEndList();
 
   box = rkglBeginList();
@@ -84,24 +84,43 @@ void init(void)
     zVec3DCreate( &c1, 0, 0,-3 );
     zBox3DCreateAlign( &box3d, &c1, 5, 8, 0.5 );
     rkglMaterial( &brown );
-    rkglBox( &box3d );
+    rkglBox( &box3d, RKGL_FACE );
   glEndList();
 }
 
 GLvoid mainloop(Window win)
 {
+  int event;
+  zxRegion reg;
+  int count = 0;
+
   while( 1 ){
-    switch( zxGetEvent() ){
+    switch( ( event = zxGetEvent() ) ){
+    case ButtonPress:
+    case ButtonRelease:
+      rkglMouseFuncGLX( &cam, event, 1.0 );
+      break;
+    case MotionNotify:
+      rkglMouseDragFuncGLX( &cam );
+      break;
     case KeyPress:
       switch( zxKeySymbol() ){
       case XK_q:
-        rkglCloseGLX();
+        rkglExitGLX();
         exit( 0 );
       }
       break;
+    case Expose:
+    case ConfigureNotify:
+      zxGetGeometry( win, &reg );
+      rkglReshapeGLX( &cam, reg.width, reg.height, 2.0, 2, 20 );
+      break;
     default: ;
     }
-    display( win );
+    if( ++count > 5 ){
+      display( win );
+      count = 0;
+    }
   }
 }
 
@@ -114,7 +133,8 @@ int main(int argc, char **argv)
 
   rkglInitGLX();
   win = rkglWindowCreateGLX( NULL, 0, 0, WIDTH, HEIGHT, "glx test" );
-  rkglWindowAddEventGLX( win, KeyPressMask | KeyReleaseMask );
+  rkglWindowKeyEnableGLX( win );
+  rkglWindowMouseEnableGLX( win );
   rkglWindowOpenGLX( win );
 
   init();

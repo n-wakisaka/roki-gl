@@ -45,7 +45,7 @@ void select_link(GLuint selbuf[], int hits)
   selected_link  = ns[4];
   zOpticalInfoCreateSimple( &oi_alt, 1.0, 0.0, 0.0, NULL );
   gr[selected_chain].attr.disptype = RKGL_FACE;
-  rkglChainLinkAlt( &gr[selected_chain], selected_link, &oi_alt, &gr[selected_chain].attr );
+  rkglChainLinkAlt( &gr[selected_chain], selected_link, &oi_alt, &gr[selected_chain].attr, &light );
 }
 
 void move_link(double angle)
@@ -115,10 +115,10 @@ void init(void)
   rkglLightSetPos( &light, 1, 3, 6 );
 
   rkglChainAttrInit( &attr );
-  rkChainScanFile( &chain[0], "../model/puma.ztk" );
-  rkglChainLoad( &gr[0], &chain[0], &attr );
-  rkChainScanFile( &chain[1], "../model/puma.ztk" );
-  rkglChainLoad( &gr[1], &chain[1], &attr );
+  rkChainReadZTK( &chain[0], "../model/puma.ztk" );
+  rkglChainLoad( &gr[0], &chain[0], &attr, &light );
+  rkChainReadZTK( &chain[1], "../model/puma.ztk" );
+  rkglChainLoad( &gr[1], &chain[1], &attr, &light );
 
   zVec3DCreate( rkChainLinkOrgPos(&chain[1],0), 0, 0.2, 0 );
   rkChainUpdateFK( &chain[1] );

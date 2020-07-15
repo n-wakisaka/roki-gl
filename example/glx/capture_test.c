@@ -1,7 +1,6 @@
-#include <roki-gl/rkgl_camera.h>
 #include <roki-gl/rkgl_shape.h>
 #include <roki-gl/rkgl_glx.h>
-#include <zx11/zximage_png.h>
+#include <zx11/zximage.h>
 
 void capture(Window win)
 {
@@ -39,13 +38,13 @@ void enter(void)
   obj = rkglBeginList();
   /* cylinder */
   rkglMaterial( &cyl_oi );
-  rkglCyl( &cyl );
+  rkglCyl( &cyl, RKGL_FACE );
   /* cone */
   rkglMaterial( &con_oi );
-  rkglCone( &con );
+  rkglCone( &con, RKGL_FACE );
   /* box */
   rkglMaterial( &box_oi );
-  rkglBox( &box );
+  rkglBox( &box, RKGL_FACE );
 
   glEndList();
 }
@@ -68,14 +67,14 @@ GLvoid init(GLsizei width, GLsizei height)
 
 GLvoid draw(Window win)
 {
-  rkglActivateGLX( win );
+  rkglWindowActivateGLX( win );
   rkglClear();
   rkglCALoad( &cam );
   rkglLightSetPos( &light, 10, 0, 8 );
   glPushMatrix();
   glCallList( obj );
   glPopMatrix();
-  rkglSwapBuffersGLX( win );
+  rkglWindowSwapBuffersGLX( win );
   rkglFlushGLX();
 }
 
@@ -95,6 +94,6 @@ int main(int argc, char **argv)
   draw( win );
   while( zxNextEvent() != Expose );
   capture( win );
-  rkglCloseGLX();
+  rkglExitGLX();
   return 0;
 }

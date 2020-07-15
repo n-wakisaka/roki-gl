@@ -9,6 +9,7 @@
 
 #include <roki-gl/rkgl_optic.h>
 #include <roki-gl/rkgl_camera.h>
+#include <roki-gl/rkgl_texture.h>
 
 __BEGIN_DECLS
 
@@ -16,16 +17,15 @@ typedef struct{
   int width, height; /* texture size */
   double ratio; /* darkness ratio */
   double radius; /* radius of bounding sphere */
-  bool antizfighting; /* flag to work out anti-Z-fighting */
+  bool antizfighting; /* flag to enable anti-Z-fighting */
   /*! @cond */
-  GLuint tex; /* texture name */
+  GLuint texid; /* texture name */
   GLuint fb; /* framebuffer name */
   double _lightview[16];
   /*! @endcond */
 } rkglShadow;
 
 void rkglShadowInit(rkglShadow *shadow, int width, int height, double radius, double ratio);
-void rkglShadowSetLight(rkglShadow *shadow, rkglLight *light);
 void rkglShadowDraw(rkglShadow *shadow, rkglCamera* cam, rkglLight *light, void (* scene)(void));
 
 #define rkglShadowEnableAntiZFighting(s)  ( (s)->antizfighting = true )
